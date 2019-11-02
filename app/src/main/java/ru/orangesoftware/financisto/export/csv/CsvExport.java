@@ -14,6 +14,7 @@ import android.content.Context;
 import android.database.Cursor;
 
 import ru.orangesoftware.financisto.db.DatabaseAdapter;
+import ru.orangesoftware.financisto.db.DatabaseHelper.BlotterColumns;
 import ru.orangesoftware.financisto.export.Export;
 import ru.orangesoftware.financisto.model.*;
 import ru.orangesoftware.financisto.utils.CurrencyCache;
@@ -104,15 +105,17 @@ public class CsvExport extends Export {
         Category category = getCategoryById(t.categoryId);
         Project project = getProjectById(t.projectId);
         Account fromAccount = getAccount(t.fromAccountId);
+        Map<Long, String> attributesMap = db.getAllAttributesForTransaction(t.id);
+
         if (t.isTransfer()) {
             Account toAccount = getAccount(t.toAccountId);
-            writeLine(w, dt, fromAccount.title, t.fromAmount, fromAccount.currency.id, 0, 0, category, null, TRANSFER_OUT, project, t.note);
-            writeLine(w, dt, toAccount.title, t.toAmount, toAccount.currency.id, 0, 0, category, null, TRANSFER_IN, project, t.note);
+            writeLine(w, dt, fromAccount.title, t.fromAmount, fromAccount.currency.id, 0, 0, category, null, TRANSFER_OUT, project, t.note, attributesMap);
+            writeLine(w, dt, toAccount.title, t.toAmount, toAccount.currency.id, 0, 0, category, null, TRANSFER_IN, project, t.note, attributesMap);
         } else {
             MyLocation location = getLocationById(t.locationId);
             Payee payee = getPayee(t.payeeId);
             writeLine(w, dt, fromAccount.title, t.fromAmount, fromAccount.currency.id, t.originalFromAmount, t.originalCurrencyId,
-                    category, payee, location, project, t.note);
+                    category, payee, location, project, t.note, attributesMap);
             if (category != null && category.isSplit() && options.exportSplits) {
                 List<Transaction> splits = db.getSplitsForTransaction(t.id);
                 for (Transaction split : splits) {
@@ -126,7 +129,8 @@ public class CsvExport extends Export {
     private void writeLine(Csv.Writer w, Date dt, String account,
                            long amount, long currencyId,
                            long originalAmount, long originalCurrencyId,
-                           Category category, Payee payee, MyLocation location, Project project, String note) {
+                           Category category, Payee payee, MyLocation location, Project project, String note,
+                           Map<Long, String> attributesMap) {
         if (dt != null) {
             w.value(FORMAT_DATE_ISO_8601.format(dt));
             w.value(FORMAT_TIME_ISO_8601.format(dt));
@@ -154,6 +158,17 @@ public class CsvExport extends Export {
         w.value(location != null ? location.title : "");
         w.value(project != null ? project.title : "");
         w.value(note);
+
+        for (Long attributeId : attributesMap.keySet()) {
+            Attribute attribute = db.getAttribute(attributeId);
+            StringBuilder valueBuilder = new StringBuilder();
+            valueBuilder.append(attribute.title);
+            valueBuilder.append(":");
+            valueBuilder.append(attributesMap.get(attributeId));
+
+            w.value(valueBuilder.toString());
+        }
+
         w.newLine();
     }
 
