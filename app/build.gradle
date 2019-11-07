@@ -16,7 +16,7 @@ android {
         minSdkVersion 19
         targetSdkVersion 28
         versionCode 122
-        versionName "1.8.2-flo"
+        versionName "1.8.2-flo-1"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
         javaCompileOptions {
